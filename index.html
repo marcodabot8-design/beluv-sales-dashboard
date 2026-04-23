@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BELUV Sales Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">BELUV</p>
+        <h1>sales dashboard</h1>
+        <p class="subtle">local-first dashboard for tracking DMs, funnel health, objections, and cash collected.</p>
+      </div>
+      <div class="topbar-actions topbar-stack">
+        <div class="sync-pill-group">
+          <span id="syncModePill" class="sync-pill">local mode</span>
+          <span id="syncStatus" class="sync-subtle">saving to this browser only</span>
+        </div>
+        <div id="authCard" class="auth-card">
+          <div class="auth-copy">
+            <p class="eyebrow">account</p>
+            <p id="authMessage" class="subtle auth-message">connect Supabase to unlock login + cloud sync.</p>
+          </div>
+          <div id="authSignedOut" class="auth-controls">
+            <input id="authEmail" type="email" placeholder="email" autocomplete="email" />
+            <input id="authPassword" type="password" placeholder="password" autocomplete="current-password" />
+            <button id="signInBtn" class="ghost-btn" type="button">sign in</button>
+            <button id="signUpBtn" class="primary-btn" type="button">create account</button>
+          </div>
+          <div id="authSignedIn" class="auth-controls hidden-row">
+            <span id="currentUserEmail" class="auth-user"></span>
+            <button id="signOutBtn" class="ghost-btn" type="button">sign out</button>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="seedDemoBtn" class="ghost-btn">load demo data</button>
+          <button id="exportBtn" class="ghost-btn">export json</button>
+          <label class="import-label ghost-btn">
+            import json
+            <input id="importInput" type="file" accept="application/json" hidden />
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="range-bar panel">
+        <div class="range-center">
+          <div>
+            <p class="eyebrow">date range</p>
+            <h2>filter dashboard window</h2>
+          </div>
+          <select id="dateRangeSelect" class="range-select">
+            <option value="today">today</option>
+            <option value="week">week</option>
+            <option value="month">month</option>
+            <option value="three_months">3 months</option>
+            <option value="lifetime" selected>lifetime</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="card-grid metrics-grid">
+        <article class="metric-card accent">
+          <span>DMS sent</span>
+          <strong id="metricDmsSent">0</strong>
+          <small>Total leads entered</small>
+        </article>
+        <article class="metric-card">
+          <span>Response rate</span>
+          <strong id="metricResponseRate">0%</strong>
+          <small>Responded / DMs sent</small>
+        </article>
+        <article class="metric-card">
+          <span>Booked rate</span>
+          <strong id="metricBookedRate">0%</strong>
+          <small>Booked / responded</small>
+        </article>
+        <article class="metric-card">
+          <span>Calls closed</span>
+          <strong id="metricCallsClosed">0</strong>
+          <small>Leads marked closed</small>
+        </article>
+        <article class="metric-card cash-card">
+          <span>Cash collected</span>
+          <strong id="metricCashCollected">$0</strong>
+          <small>Total closed won revenue</small>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel" data-collapsible>
+          <div class="panel-header">
+            <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+            <div>
+              <p class="eyebrow">funnel snapshot</p>
+              <h2>where the bottleneck is</h2>
+            </div>
+          </div>
+          <div id="stageBreakdown" class="stage-breakdown"></div>
+        </article>
+
+        <article class="panel" data-collapsible>
+          <div class="panel-header">
+            <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+            <div>
+              <p class="eyebrow">objections</p>
+              <h2>top friction points</h2>
+            </div>
+          </div>
+          <div id="objectionsList" class="list-stack empty-state">no objections logged yet.</div>
+        </article>
+      </section>
+
+      <section class="content-grid secondary-grid">
+        <article class="panel" data-collapsible>
+          <div class="panel-header">
+            <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+            <div>
+              <p class="eyebrow">diagnostic</p>
+              <h2>quick status report</h2>
+            </div>
+          </div>
+          <div id="insightsList" class="list-stack empty-state">add some leads to get recommendations.</div>
+        </article>
+
+        <article class="panel" data-collapsible>
+          <div class="panel-header">
+            <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+            <div>
+              <p class="eyebrow">source mix</p>
+              <h2>where leads are coming from</h2>
+            </div>
+          </div>
+          <div id="sourceBreakdown" class="list-stack empty-state">no sources yet.</div>
+        </article>
+      </section>
+
+      <section class="panel form-panel" data-collapsible>
+        <div class="panel-header">
+          <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+          <div>
+            <p class="eyebrow">new lead</p>
+            <h2>track a lead from DM to close</h2>
+          </div>
+        </div>
+
+        <form id="leadForm" class="lead-form">
+          <input id="leadEditId" name="editId" type="hidden" />
+          <div class="field-group">
+            <label for="leadHandle">IG handle / name</label>
+            <input id="leadHandle" name="handle" type="text" placeholder="@artistname" required />
+          </div>
+
+          <div class="field-group">
+            <label for="leadStage">current stage</label>
+            <select id="leadStage" name="stage">
+              <option value="dm_sent">DM sent</option>
+              <option value="responded">Responded</option>
+              <option value="qualified">Qualified</option>
+              <option value="booked">Call booked</option>
+              <option value="showed">Call showed</option>
+              <option value="closed_won">Closed won</option>
+              <option value="closed_lost">Closed lost</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="leadSource">source</label>
+            <select id="leadSource" name="source">
+              <option value="instagram_outbound">Instagram outbound</option>
+              <option value="instagram_inbound">Instagram inbound</option>
+              <option value="story_reply">Story reply</option>
+              <option value="referral">Referral</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="leadAmount">cash collected</label>
+            <input id="leadAmount" name="amount" type="number" min="0" step="0.01" placeholder="0" />
+          </div>
+
+          <div class="field-group wide">
+            <label for="leadObjection">main objection</label>
+            <input id="leadObjection" name="objection" type="text" placeholder="too expensive, not ready, needs to think..." />
+          </div>
+
+          <div class="field-group wide">
+            <label for="leadNotes">notes</label>
+            <textarea id="leadNotes" name="notes" rows="3" placeholder="anything useful about this lead"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button id="saveLeadBtn" type="submit" class="primary-btn">save lead</button>
+            <button type="reset" class="ghost-btn">clear</button>
+            <button id="cancelEditBtn" type="button" class="ghost-btn hidden-btn">cancel edit</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel table-panel" data-collapsible>
+        <div class="panel-header">
+          <button type="button" class="panel-toggle" aria-expanded="true">▾</button>
+          <div>
+            <p class="eyebrow">lead tracker</p>
+            <h2>every lead, one place</h2>
+          </div>
+          <button id="clearAllBtn" class="ghost-btn danger-btn">clear all data</button>
+        </div>
+
+        <div class="filters-bar">
+          <input id="searchInput" type="search" placeholder="search by handle, notes, or objection" />
+          <select id="stageFilter">
+            <option value="all">all stages</option>
+            <option value="dm_sent">DM sent</option>
+            <option value="responded">Responded</option>
+            <option value="qualified">Qualified</option>
+            <option value="booked">Call booked</option>
+            <option value="showed">Call showed</option>
+            <option value="closed_won">Closed won</option>
+            <option value="closed_lost">Closed lost</option>
+          </select>
+          <select id="sourceFilter">
+            <option value="all">all sources</option>
+            <option value="instagram_outbound">Instagram outbound</option>
+            <option value="instagram_inbound">Instagram inbound</option>
+            <option value="story_reply">Story reply</option>
+            <option value="referral">Referral</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="sortSelect">
+            <option value="updated_desc">sort: newest updated</option>
+            <option value="updated_asc">sort: oldest updated</option>
+            <option value="cash_desc">sort: highest cash</option>
+            <option value="cash_asc">sort: lowest cash</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>Stage</th>
+                <th>Source</th>
+                <th>Objection</th>
+                <th>Cash</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="leadRowTemplate">
+    <tr>
+      <td>
+        <div class="lead-cell">
+          <strong data-field="handle"></strong>
+          <small data-field="notes"></small>
+        </div>
+      </td>
+      <td><span class="stage-pill" data-field="stageLabel"></span></td>
+      <td data-field="sourceLabel"></td>
+      <td data-field="objection"></td>
+      <td data-field="amount"></td>
+      <td data-field="updatedAt"></td>
+      <td class="row-actions">
+        <button data-action="edit" class="ghost-btn small-btn">edit</button>
+        <button data-action="delete" class="ghost-btn danger-btn small-btn">delete</button>
+      </td>
+    </tr>
+  </template>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="cloud.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
